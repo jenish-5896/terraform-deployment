@@ -1,0 +1,260 @@
+ during acm you need to add cname on cloudflare so until you do this and acm get issued others step cannot continue
+
+
+
+
+AWS Terraform Infrastructure — Step-by-Step
+1. Created VPC
+
+Created the main VPC for the AWS infrastructure.
+
+2. Created Public Subnets
+
+Created two public subnets in different Availability Zones.
+
+Used these subnets for the ALB and NAT Gateway.
+
+3. Created Private Subnet
+
+Created a private subnet for EC2 instances.
+
+EC2 instances do not have direct internet access.
+
+4. Created Internet Gateway
+
+Attached an Internet Gateway to the VPC.
+
+Provides internet connectivity to public subnets.
+
+5. Created Public Route Table
+
+Added a default route through the Internet Gateway.
+
+Associated the route table with public subnets.
+
+6. Created Elastic IP
+
+Created an Elastic IP for the NAT Gateway.
+
+7. Created NAT Gateway
+
+Created the NAT Gateway inside the public subnet.
+
+Allows private EC2 instances to access the internet for outbound traffic.
+
+8. Created Private Route Table
+
+Added a default route through the NAT Gateway.
+
+Associated it with the private subnet.
+
+9. Created Security Groups
+
+Created an ALB security group allowing HTTP/HTTPS traffic.
+
+Created an EC2 security group allowing application traffic from the ALB.
+
+10. Created IAM Role
+
+Created an IAM role for EC2 instances.
+
+11. Created IAM Policies
+
+Created two policies for required AWS permissions.
+
+Attached the policies to the EC2 IAM role.
+
+12. Created IAM Instance Profile
+
+Created an instance profile to attach the IAM role to EC2 instances.
+
+13. Created Launch Template
+
+Configured AMI, instance type, security group, IAM instance profile, and user data.
+
+14. Added User Data
+
+Added a startup script to automatically install and configure the application when EC2 starts.
+
+15. Created Auto Scaling Group
+
+Created an ASG with minimum, maximum, and desired instance capacity.
+
+Configured EC2 instances to launch in the private subnet.
+
+16. Added Instance Refresh
+
+Configured rolling instance refresh.
+
+Allows EC2 instances to be replaced gradually when the Launch Template changes.
+
+17. Created Target Group
+
+Created an HTTP target group on port 80.
+
+Configured health checks for EC2 instances.
+
+18. Attached ASG to Target Group
+
+Connected the Auto Scaling Group to the ALB target group.
+
+New instances launched by the ASG are automatically registered.
+
+19. Created Application Load Balancer
+
+Created a public ALB in two Availability Zones.
+
+ALB receives traffic from users and forwards it to private EC2 instances.
+
+20. Created HTTP Listener
+
+Created an HTTP listener on port 80.
+
+Configured it to redirect HTTP traffic to HTTPS.
+
+21. Created ACM Certificate for ALB
+
+Created an ACM certificate in ap-southeast-1.
+
+Added the main domain and www subdomain.
+
+Used DNS validation.
+
+22. Enabled HTTPS on ALB
+
+Opened port 443 in the ALB security group.
+
+Created an HTTPS listener on port 443.
+
+Attached the ALB ACM certificate to the listener.
+
+23. Created Private S3 Bucket
+
+Created an S3 bucket for static/application files.
+
+Kept the bucket private.
+
+24. Enabled S3 Block Public Access
+
+Blocked public access to the S3 bucket.
+
+25. Created CloudFront Origin Access Control
+
+Created OAC so CloudFront can securely access the private S3 bucket.
+
+26. Created S3 Bucket Policy
+
+Allowed CloudFront to read objects from S3.
+
+Restricted access using the CloudFront distribution ARN.
+
+27. Created ACM Certificate for CloudFront
+
+Created a separate ACM certificate in us-east-1.
+
+CloudFront requires its ACM certificate to be in us-east-1.
+
+28. Validated CloudFront ACM Certificate
+
+Used DNS validation.
+
+Added the ACM CNAME records manually because Route 53 was not used.
+
+Waited until the certificate became ISSUED.
+
+29. Created CloudFront Distribution
+
+Created CloudFront in front of the private S3 bucket.
+
+Configured HTTPS and the CloudFront ACM certificate.
+
+30. Configured CloudFront Price Class
+
+Configured PriceClass_200 to provide broad coverage including Asia while avoiding the highest-cost PriceClass_All.
+
+31. Configured CloudFront Domain
+
+Added the main domain and www domain as CloudFront aliases.
+
+32. Created CloudFront WAF
+
+Created a WAF Web ACL with CLOUDFRONT scope.
+
+Created it in us-east-1.
+
+Added AWS managed security rules.
+
+33. Attached WAF to CloudFront
+
+Attached the CloudFront WAF to the CloudFront distribution.
+
+34. Created ALB WAF
+
+Created a separate WAF Web ACL with REGIONAL scope.
+
+Created it in ap-southeast-1.
+
+35.Attached WAF to ALB
+
+Used aws_wafv2_web_acl_association.
+
+Attached the regional WAF to the Application Load Balancer.
+
+36. Created ALB Listener Rules
+
+Created listener rules to route requests to the appropriate target groups.
+
+Listener rules can route traffic based on conditions such as path or host.
+
+37. Configured DNS
+
+Did not use Route 53.
+
+Configured the domain using an external DNS provider.
+
+Pointed the domain to CloudFront/ALB as required.
+
+38. Configured Terraform State and Drift Checking
+
+Used Terraform state to track infrastructure managed by Terraform.
+
+Used terraform plan to check for changes.
+
+Used terraform plan -refresh-only to detect changes to Terraform-managed resources.
+
+39. Configured AWS Config
+
+AWS Config can be used to continuously record AWS resource configuration changes.
+
+Useful for detecting changes made outside Terraform, including changes made through the AWS Console.
+
+40. Configured CloudTrail
+
+CloudTrail records AWS API activity.
+
+Used to identify who made a change, when it happened, and which AWS API operation was performed.
+
+
+
+
+
+
+Final Architecture
+
+Internet → CloudFront → Private S3
+
+Internet → ALB → Target Group → Private EC2
+
+CloudFront WAF protects CloudFront.
+
+ALB WAF protects the ALB.
+
+ACM provides HTTPS certificates.
+
+NAT Gateway provides outbound internet access to private EC2.
+
+Auto Scaling Group manages EC2 instances.
+
+AWS Config tracks infrastructure configuration changes.
+
+CloudTrail provides an audit trail of AWS changes.
